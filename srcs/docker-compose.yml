@@ -1,6 +1,6 @@
 services:
   # service name and image name has to be the same to avoid below warning
-  # pull access denied for <name>, repository does not exist or may require 'docker login': denied: requested access to the resource is denied 
+  # Warning: pull access denied for <name>, repository does not exist or may require 'docker login': denied: requested access to the resource is denied 
   mariadb:
     image: mariadb
     build:
@@ -21,6 +21,23 @@ services:
       - my_network
     restart: unless-stopped
 
+  nginx:
+    #image: nginx:latest
+    image: nginx
+    build:
+      context: requirements/mariadb
+      dockerfile: "Dockerfile"
+    container_name: nginx
+    environment:
+      DOMAIN_NAME: ${DOMAIN_NAME}
+    ports:
+        - "80:80"
+        # - "443:443"
+    env_file:
+        .env
+    networks:
+      - my_network
+    restart: unless-stopped
 
 volumes:
   db_data:

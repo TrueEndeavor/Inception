@@ -1,5 +1,10 @@
 #!/bin/bash
 
+# Wait for MariaDB to be ready for connections
+# Wait for MySQL to be ready
+# Set a max retry count to avoid infinite looping
+RETRY_COUNT=0
+
 # Exit on error and fail if any command in a pipeline fails
 set -eo pipefail
 
@@ -13,10 +18,13 @@ if [ ! -d "/var/lib/mysql/is_init" ]; then
     mysqld --user=mysql --skip-networking &
     pid="$!"
 
-    # Wait for MariaDB to be ready for connections
-    # Wait for MySQL to be ready
     until mysqladmin ping -h"localhost" --silent; do
-        echo "Waiting for MariaDB to be ready..."
+        RETRY_COUNT=$((RETRY_COUNT+1))
+        if [ "$RETRY_COUNT" -ge 10 ]; then
+            echo "MariaDB failed to start after 10 attempts. Exiting."
+            exit 1
+        fi
+        echo "Waiting for MariaDB to be ready... Attempt $RETRY_COUNT/10"
         sleep 2
     done
 

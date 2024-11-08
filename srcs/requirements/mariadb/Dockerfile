@@ -26,7 +26,7 @@ WORKDIR /var/lib/mysql
 EXPOSE 3306
 
 #Run entrypoint script with CMD to manage initialization
-ENTRYPOINT ["tools/create_db.sh"]
+ENTRYPOINT ["create_db.sh"]
 
 #Start the MariaDB server
 CMD ["mysqld"]
