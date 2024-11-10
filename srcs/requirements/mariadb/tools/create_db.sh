@@ -1,50 +1,31 @@
 #!/bin/bash
 
-# Wait for MariaDB to be ready for connections
-# Wait for MySQL to be ready
-# Set a max retry count to avoid infinite looping
-RETRY_COUNT=0
+# Load environment variables from the secrets file
+source $SECRETS
 
-# Exit on error and fail if any command in a pipeline fails
-set -eo pipefail
+# Read the database and root passwords from their respective secret files
+DB_PASSWORD=$(cat $DB_PASSWORD)
+DB_ROOT_PASSWORD=$(cat $DB_ROOT_PASSWORD)
 
-# Skip initialization if it's already done
-if [ ! -d "/var/lib/mysql/is_init" ]; then
+# Start MariaDB service
+service mariadb start
 
-    # Initialize the database files for the first setup
-    mysql_install_db --user=mysql --datadir=/var/lib/mysql
+# Execute SQL commands to initialize the database and user permissions
+mariadb -u root << EOF
+	CREATE DATABASE IF NOT EXISTS ${DB_NAME};
+	CREATE USER IF NOT EXISTS '${DB_USER}'@'localhost' IDENTIFIED BY '${DB_PASSWORD}';
+	GRANT ALL PRIVILEGES ON ${DB_NAME}.* TO '${DB_USER}'@'%' IDENTIFIED BY '${DB_PASSWORD}';
+	GRANT ALL PRIVILEGES ON ${DB_NAME}.* TO 'root'@'%' IDENTIFIED BY '${DB_ROOT_PASSWORD}';
+	SET PASSWORD FOR 'root'@'localhost' = PASSWORD('$DB_ROOT_PASSWORD');
+EOF
 
-    # Start MariaDB in non-networked mode to configure users and privileges
-    mysqld --user=mysql --skip-networking &
-    pid="$!"
+sleep 5
 
-    until mysqladmin ping -h"localhost" --silent; do
-        RETRY_COUNT=$((RETRY_COUNT+1))
-        if [ "$RETRY_COUNT" -ge 10 ]; then
-            echo "MariaDB failed to start after 10 attempts. Exiting."
-            exit 1
-        fi
-        echo "Waiting for MariaDB to be ready... Attempt $RETRY_COUNT/10"
-        sleep 2
-    done
+# Stop to enable controlled startup, also let additional commands get executed via exec
+service mariadb stop
 
-     # Set up root user, database, and main user for WordPress
-    mysql -e "FLUSH PRIVILEGES;"
-    mysql -e "CREATE USER IF NOT EXISTS 'root'@'%';"
-    mysql -e "ALTER USER 'root'@'%' IDENTIFIED BY '';"
-    mysql -e "CREATE DATABASE IF NOT EXISTS ${MYSQL_DATABASE};"
-    mysql -e "CREATE USER IF NOT EXISTS '${MYSQL_USER}'@'%' IDENTIFIED BY '${MYSQL_PASSWORD}';"
-    mysql -e "GRANT ALL PRIVILEGES ON ${MYSQL_DATABASE}.* TO '${MYSQL_USER}'@'%';"
-    mysql -e "GRANT ALL ON *.* TO 'root'@'%' WITH GRANT OPTION;"
-    mysql -e "FLUSH PRIVILEGES;"
+# Execute any additional commands passed to the script
+exec $@
 
-    # Create a marker file to indicate initialization completion
-    echo "done" > /var/lib/mysql/is_init
 
-    # Shut down the temporary instance
-    mysqladmin -uroot -p${MYSQL_ROOT_PASSWORD} shutdown
-    wait "$pid"
-fi
-
-# Start MySQL server
-exec gosu mysql "$@"
+# Ref: https://stackoverflow.com/questions/77867808/mariadb-in-docker-works-with-managed-volume-but-not-with-mapped

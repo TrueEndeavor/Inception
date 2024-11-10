@@ -1,31 +1,22 @@
+# Use Debian as the base image with a stable NGINX version
 FROM debian:bullseye
 
-# Update and install necessary packages
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends nginx openssl && \
-    apt-get clean && rm -rf /var/lib/apt/lists/*
+# Install NGINX and OpenSSL for HTTPS support
+RUN apt update && \
+	apt install openssl nginx -y && \
+	apt-get clean && \
+	# Clear /var/lib/apt/lists and other tmp folders to reduce image size as per best practices
+	rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
-RUN mkdir -p /var/www/html && \
-	# web root directory
-	chmod -R 775 /var/www/html && \
+# Copy custom NGINX configuration file to replace the default configuration
+COPY ./conf/nginx.conf /etc/nginx/nginx.conf
 
-	chown -R www-data:www-data /var/www/html
+# Use an entrypoint script to initialize NGINX
+COPY ./tools/start_nginx.sh /bin/
+RUN chmod +x /bin/start_nginx.sh
 
-# Create SSL directory and generate a self-signed SSL certificate
-RUN mkdir -p /etc/nginx/ssl && \
-    openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
-        -keyout /etc/nginx/ssl/${DOMAIN_NAME}.key \
-        -out /etc/nginx/ssl/${DOMAIN_NAME}.crt \
-        -subj "/C=FR/ST=42School/L=Paris/O=InceptionProject/OU=DevOps/CN=${DOMAIN_NAME}"
+# Expose port 443 for HTTPS connections
+EXPOSE 443
 
-COPY ./nginx.conf /etc/nginx/nginx.conf
-
-# Test nginx conf for syntax errors
-#RUN nginx -t
-
-WORKDIR /var/www/html
-
-# EXPOSE 443
-EXPOSE 80 443
-
-CMD ["nginx", "-g", "daemon off;"]
+# Run entrypoint script with CMD to start initialization
+CMD ["start_nginx.sh"]

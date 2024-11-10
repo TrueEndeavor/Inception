@@ -1,47 +1,96 @@
-services:
-  # service name and image name has to be the same to avoid below warning
-  # Warning: pull access denied for <name>, repository does not exist or may require 'docker login': denied: requested access to the resource is denied 
+
+volumes:                                       # Define shared volumes for data persistence
   mariadb:
-    image: mariadb
-    build:
-     context: requirements/mariadb
-     dockerfile: "Dockerfile"
-    container_name: mariadb
-    environment:
-      MYSQL_DATABASE: ${MYSQL_DATABASE}
-      MYSQL_USER: ${MYSQL_USER}
-      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
-    ports:
-        - "3306:3306"
-    volumes:
-        - db_data:/var/lib/mysql
-    env_file:
-        .env
-    networks:
-      - my_network
-    restart: unless-stopped
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /home/lannur-s/data/mariadb         # Specify path for MariaDB data
 
-  nginx:
-    #image: nginx:latest
-    image: nginx
-    build:
-      context: requirements/mariadb
-      dockerfile: "Dockerfile"
-    container_name: nginx
-    environment:
-      DOMAIN_NAME: ${DOMAIN_NAME}
-    ports:
-        - "80:80"
-        # - "443:443"
-    env_file:
-        .env
-    networks:
-      - my_network
-    restart: unless-stopped
-
-volumes:
-  db_data:
+  wordpress:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /home/lannur-s/data/wordpress       # Specify path for WordPress data
 
 networks:
-  my_network:
-    driver: bridge
+  inception-nw:
+    name: lannur-s-inception  # Custom network name
+    driver: bridge  # Use bridge driver for network
+
+services:
+
+#------------------------------------------ MARIADB ------------------------------------------#
+  mariadb:                               # Define the MariaDB service
+    container_name: mariadb
+    build: ./requirements/mariadb
+    env_file:
+      - .env
+    volumes:
+      - mariadb:/var/lib/mysql              # Persist database data in a volume
+    secrets:
+      - credentials                         # Securely pass credentials
+      - db_password                         # Pass the database password as a secret
+      - db_root_password                    # Pass the root password as a secret
+    networks:
+      - inception-nw                        # Connect to the custom network
+    init: true                              # Ensure containers are initialized properly
+    restart: on-failure                     # Restart the container on failure
+
+# Explanation of Dependency:
+# MariaDB runs independently and is the first service in the dependency chain. 
+# It must be up and running before WordPress
+# WordPress needs a functioning database connection to store its data
+
+#----------------------------------------- WORDPRESS -----------------------------------------#
+  wordpress:                             # Define the WordPress service
+    container_name: wordpress
+    build: ./requirements/wordpress
+    env_file:
+      - .env
+    volumes:
+      - wordpress:/var/www/wordpress        # Persist WordPress files in a volume
+    secrets:
+      - credentials
+      - db_password
+    networks:
+      - inception-nw
+    init: true
+    restart: on-failure
+    depends_on:
+      - mariadb                             # Ensure MariaDB starts before WordPress
+
+# Explanation of Dependency:
+# WordPress depends on MariaDB. 
+# WordPress is started only after MariaDB is up.
+# Thus WordPress can initialize with a live database connection, preventing connection errors
+
+#----------------------------------------- NGINX ------------------------------------------#
+  nginx:                                 # Define the NGINX service
+    container_name: nginx
+    build: ./requirements/nginx
+    ports:
+      - '443:443'                           # Map port 443 for HTTPS access
+    volumes:
+      - wordpress:/var/www/wordpress        # Share volume with WordPress for web files
+    networks:
+      - inception-nw
+    init: true
+    restart: on-failure
+    depends_on:
+      - wordpress                           # Ensure WordPress starts before NGINX
+
+# Explanation of Dependency:
+# NGINX depends on WordPress. 
+# Ensures WordPress is running before starting NGINX.
+# Thus NGINX serves WordPress content over HTTPS without content or configuration errors
+
+
+secrets:                                      # Define secrets for secure sensitive data storage
+  credentials:
+    file: ~/inception/secrets/credentials.txt # Path to credentials file
+  db_password:
+    file: ~/inception/secrets/db_password.txt
+  db_root_password:
+    file: ~/inception/secrets/db_root_password.txt
