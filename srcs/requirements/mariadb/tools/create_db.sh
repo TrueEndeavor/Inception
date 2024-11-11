@@ -9,6 +9,7 @@ DB_ROOT_PASSWORD=$(cat $DB_ROOT_PASSWORD)
 
 # Start MariaDB service
 service mariadb start
+sleep 5 
 
 # Execute SQL commands to initialize the database and user permissions
 mariadb -u root << EOF
@@ -21,7 +22,7 @@ EOF
 
 sleep 5
 
-# Stop to enable controlled startup, also let additional commands get executed via exec
+# Shutdown mariadb to restart with new config
 service mariadb stop
 
 # Execute any additional commands passed to the script

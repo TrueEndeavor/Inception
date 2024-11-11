@@ -11,12 +11,18 @@ RUN apt update && \
 # Copy custom NGINX configuration file to replace the default configuration
 COPY ./conf/nginx.conf /etc/nginx/nginx.conf
 
-# Use an entrypoint script to initialize NGINX
-COPY ./tools/start_nginx.sh /bin/
-RUN chmod +x /bin/start_nginx.sh
+
+# Create SSL certificates directory and generate self-signed certificate and key
+RUN mkdir -p /etc/nginx/ssl && \
+    openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
+    -keyout /etc/nginx/ssl/inception.key \
+    -out /etc/nginx/ssl/inception.crt \
+    -sha256 \
+    -subj "/C=FR/ST=42School/L=Paris/O=InceptionProject/OU=DevOps/CN=localhost"
+RUN chmod 644 /etc/nginx/ssl/inception.key /etc/nginx/ssl/inception.crt
 
 # Expose port 443 for HTTPS connections
 EXPOSE 443
 
-# Run entrypoint script with CMD to start initialization
-CMD ["start_nginx.sh"]
+# Start NGINX in the foreground
+CMD ["nginx", "-g", "daemon off;"]
