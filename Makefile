@@ -6,7 +6,7 @@ create_dirs:
 	@mkdir -p $(HOME)/data/wordpress
 
 build : create_dirs
-	docker-compose -f srcs/docker-compose.yml build --no-cache
+	docker-compose -f srcs/docker-compose.yml build
 
 up: create_dirs
 	docker-compose -f srcs/docker-compose.yml up

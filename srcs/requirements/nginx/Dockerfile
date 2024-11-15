@@ -11,7 +11,6 @@ RUN apt update && \
 # Copy custom NGINX configuration file to replace the default configuration
 COPY ./conf/nginx.conf /etc/nginx/nginx.conf
 
-
 # Create SSL certificates directory and generate self-signed certificate and key
 RUN mkdir -p /etc/nginx/ssl && \
     openssl req -x509 -nodes -days 365 -newkey rsa:2048 \

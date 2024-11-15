@@ -73,13 +73,13 @@ services:
     ports:
       - '443:443'                           # Map port 443 for HTTPS access
     volumes:
-      - wordpress:/var/www/wordpress        # Share volume with WordPress for web files
+     - wordpress:/var/www/wordpress        # Share volume with WordPress for web files
     networks:
       - inception-nw
     init: true
     restart: on-failure
     depends_on:
-      - wordpress                           # Ensure WordPress starts before NGINX
+     - wordpress                           # Ensure WordPress starts before NGINX
 
 # Explanation of Dependency:
 # NGINX depends on WordPress. 

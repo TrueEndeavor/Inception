@@ -20,7 +20,8 @@ RUN apt update && apt install --no-install-recommends --no-install-suggests -y \
 RUN service php7.4-fpm stop
 
 # Copy custom PHP-FPM pool configuration to manage processes for this setup
-COPY ./conf/www.conf /etc/php/7.4/fpm/pool.d/
+COPY ./conf/wp.conf /etc/php/7.4/fpm/pool.d/
+RUN sed -i 's/listen = \/run\/php\/php7.4-fpm.sock/listen = wordpress:9000/' /etc/php/7.4/fpm/pool.d/www.conf
 
 # Copy custom PHP-FPM pool configuration to manage processes for this setup
 RUN mkdir -p /run/php && \
