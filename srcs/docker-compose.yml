@@ -1,22 +1,21 @@
 
 volumes:                                       # Define shared volumes for data persistence
-  mariadb:
+  db:
     driver: local
     driver_opts:
       type: none
       o: bind
-      device: /home/lannur-s/data/mariadb         # Specify path for MariaDB data
+      device: /home/lannur-s/data/db           # Specify path for MariaDB data
 
-  wordpress:
+  wp:
     driver: local
     driver_opts:
       type: none
       o: bind
-      device: /home/lannur-s/data/wordpress       # Specify path for WordPress data
+      device: /home/lannur-s/data/wp          # Specify path for WordPress data
 
 networks:
   inception-nw:
-    name: lannur-s-inception  # Custom network name
     driver: bridge  # Use bridge driver for network
 
 services:
@@ -28,11 +27,7 @@ services:
     env_file:
       - .env
     volumes:
-      - mariadb:/var/lib/mysql              # Persist database data in a volume
-    secrets:
-      - credentials                         # Securely pass credentials
-      - db_password                         # Pass the database password as a secret
-      - db_root_password                    # Pass the root password as a secret
+      - db:/var/lib/mysql                   # Persist database data in a volume
     networks:
       - inception-nw                        # Connect to the custom network
     init: true                              # Ensure containers are initialized properly
@@ -51,9 +46,6 @@ services:
       - .env
     volumes:
       - wordpress:/var/www/wordpress        # Persist WordPress files in a volume
-    secrets:
-      - credentials
-      - db_password
     networks:
       - inception-nw
     init: true
@@ -73,7 +65,7 @@ services:
     ports:
       - '443:443'                           # Map port 443 for HTTPS access
     volumes:
-     - wordpress:/var/www/wordpress        # Share volume with WordPress for web files
+     - wp:/var/www/wordpress        # Share volume with WordPress for web files
     networks:
       - inception-nw
     init: true
@@ -85,12 +77,3 @@ services:
 # NGINX depends on WordPress. 
 # Ensures WordPress is running before starting NGINX.
 # Thus NGINX serves WordPress content over HTTPS without content or configuration errors
-
-
-secrets:                                      # Define secrets for secure sensitive data storage
-  credentials:
-    file: ~/inception/secrets/credentials.txt # Path to credentials file
-  db_password:
-    file: ~/inception/secrets/db_password.txt
-  db_root_password:
-    file: ~/inception/secrets/db_root_password.txt

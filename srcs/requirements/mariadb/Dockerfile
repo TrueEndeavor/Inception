@@ -13,11 +13,11 @@ RUN apt update -y && \
 COPY ./conf/50-server.cnf /etc/mysql/mariadb.conf.d/
 
 # Use an entrypoint script to initialize and configure the database securely
-COPY ./tools/create_db.sh /bin/
-RUN chmod +x /bin/create_db.sh
+COPY ./tools/setup.sh /bin/
+RUN chmod +x /bin/setup.sh
 
 #Expose MariaDB on default port 3306
 EXPOSE 3306
 
 #Run entrypoint script with CMD to manage initialization
-CMD ["create_db.sh", "mysqld_safe"]
+CMD ["setup.sh", "mysqld_safe"]

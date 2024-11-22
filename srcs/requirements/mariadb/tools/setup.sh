@@ -1,9 +1,6 @@
 #!/bin/bash
 
 # Load environment variables from the secrets file
-source $SECRETS
-
-# Read the database and root passwords from their respective secret files
 DB_PASSWORD=$(cat $DB_PASSWORD)
 DB_ROOT_PASSWORD=$(cat $DB_ROOT_PASSWORD)
 

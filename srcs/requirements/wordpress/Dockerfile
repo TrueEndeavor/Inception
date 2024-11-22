@@ -20,19 +20,18 @@ RUN apt update && apt install --no-install-recommends --no-install-suggests -y \
 RUN service php7.4-fpm stop
 
 # Copy custom PHP-FPM pool configuration to manage processes for this setup
-COPY ./conf/wp.conf /etc/php/7.4/fpm/pool.d/
-RUN sed -i 's/listen = \/run\/php\/php7.4-fpm.sock/listen = wordpress:9000/' /etc/php/7.4/fpm/pool.d/www.conf
+COPY ./conf/www.conf /etc/php/7.4/fpm/pool.d/
 
 # Copy custom PHP-FPM pool configuration to manage processes for this setup
 RUN mkdir -p /run/php && \
 	mkdir -p /var/run/php
 
 # Use an entrypoint script to install WordPress
-COPY ./tools/install_wordpress.sh /bin/install_wordpress.sh
-RUN chmod +x /bin/install_wordpress.sh
+COPY ./tools/install-wordpress.sh /bin/install-wordpress.sh
+RUN chmod +x /bin/install-wordpress.sh
 
 # Expose port 9000 for PHP-FPM to listen for incoming FastCGI requests
 EXPOSE 9000
 
 # Run entrypoint script with CMD to start initialization
-CMD ["install_wordpress.sh", "php-fpm7.4", "-F"]
+CMD ["install-wordpress.sh", "php-fpm7.4", "-F"]

@@ -1,7 +1,6 @@
 #!/bin/bash
 
 # Load credentials into the current environment
-source $SECRETS
 DB_PASSWORD=$(cat $DB_PASSWORD)
 
 # Wait for MariaDB to start by adding a delay
